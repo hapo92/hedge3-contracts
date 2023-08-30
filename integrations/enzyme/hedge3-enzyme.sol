@@ -33,7 +33,18 @@ interface IVault {
     external returns (address[] memory, uint256[] memory);
 }
 
+/**
+ * @title Hedge3Enzyme Contract
+ * @dev A contract to invest in Enzyme vaults and redeem shares.
+ * Implements Ownable for administrative control and ReentrancyGuard to prevent reentrancy attacks.
+ */
 contract Hedge3Enzyme is Ownable, ReentrancyGuard {
+    /**
+     * @dev Invests in an Enzyme vault using the specified denomination token.
+     * @param comptrollerProxyAddress The address of the Enzyme vault's comptroller proxy.
+     * @param denominationTokenAddress The address of the token used for investment.
+     * @param amount The amount of tokens to invest.
+     */
     function investInEnzymeVault(
         address comptrollerProxyAddress, 
         address denominationTokenAddress, 
@@ -55,15 +66,21 @@ contract Hedge3Enzyme is Ownable, ReentrancyGuard {
         // Approve the vault to spend the tokens
         require(denominationToken.approve(comptrollerProxyAddress, amount), "Failed to approve token transfer");
 
+        // Buy shares in the Enzyme vault on behalf of the sender
         IVault(comptrollerProxyAddress).buySharesOnBehalf(msg.sender, amount, 1);  
     }
 
    
-    
-  function redeemFromEnzymeFundInKind(
-    address comptrollerProxyAddress,
-    address vaultTokenAddress,
-    uint256 sharesQuantity
+    /**
+     * @dev Redeems shares from an Enzyme vault in kind. Allows an investor to redeem a specified quantity of shares they hold in vault in the form of the underlying assets held by the vault.
+     * @param comptrollerProxyAddress The address of the Enzyme vault's comptroller proxy.
+     * @param vaultTokenAddress The address of the vault token.
+     * @param sharesQuantity The quantity of shares to redeem.
+     */
+    function redeemFromEnzymeFundInKind(
+        address comptrollerProxyAddress,
+        address vaultTokenAddress,
+        uint256 sharesQuantity
     ) external {
         IERC20 vaultToken = IERC20(vaultTokenAddress);
         require(vaultToken.allowance(msg.sender, address(this)) >= sharesQuantity, "ERC20: transfer amount exceeds allowance ");
@@ -73,6 +90,7 @@ contract Hedge3Enzyme is Ownable, ReentrancyGuard {
         address[] memory additionalAssets = new address[](0);
         address[] memory assetsToSkip = new address[](0);
 
+        // Redeem shares in kind from the Enzyme vault
         IVault(comptrollerProxyAddress).redeemSharesInKind(
             msg.sender,
             sharesQuantity, 
